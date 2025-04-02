@@ -1,5 +1,8 @@
 "use server";
 
+import { getCollection } from "../lib/db.js";
+// import { test } from "../lib/db.js";
+
 function isAlphaNumeric(x) {
   const regex = /^[a-zA-Z0-9]*$/;
   return regex.test(x);
@@ -29,7 +32,7 @@ export const register = async function (prevState, formData) {
   if (user.username.length > 30) {
     errors.username = "Username cannot be longer than 30 characters";
   }
-  if (!isAlphaNumeric(user.username)) { 
+  if (!isAlphaNumeric(user.username)) {
     errors.username = "Username can only contain letters and numbers";
   }
 
@@ -39,21 +42,25 @@ export const register = async function (prevState, formData) {
   if (user.password.length > 12) {
     errors.password = "Password cannot be longer than 12 characters";
   }
-  if (!isAlphaNumeric(user.password)) { 
+  if (!isAlphaNumeric(user.password)) {
     errors.password = "Password can only contain letters and numbers";
   }
 
-  if (errors.username || errors.password) { 
+  if (errors.username || errors.password) {
     return {
       errors,
       success: false,
-    }
+    };
   }
 
   // storing user in db
+
+  const usersCollection = await getCollection("users");
+  await usersCollection.insertOne(user);
+
   // log them in using cookie
 
   return {
     success: true,
-  }
+  };
 };
