@@ -54,6 +54,14 @@ export const register = async function (prevState, formData) {
     errors.password = "Password can only contain letters and numbers";
   }
 
+  const usersCollection = await getCollection("users");
+  const doesUserExist = await usersCollection.findOne({
+    username: user.username,
+  });
+  if (doesUserExist) {
+    errors.username = "Username already exists";
+  }
+
   if (errors.username || errors.password) {
     return {
       errors,
@@ -68,7 +76,6 @@ export const register = async function (prevState, formData) {
 
   // storing user in db
 
-  const usersCollection = await getCollection("users");
   const newUser = await usersCollection.insertOne(user);
   const userId = newUser.insertedId.toString();
   // create jwt token
@@ -91,4 +98,55 @@ export const register = async function (prevState, formData) {
   return {
     success: true,
   };
+};
+
+export const login = async function (prevState, formData) {
+  const failObject = {
+    success: false,
+    message: "Incorrect username or password",
+  };
+  const user = {
+    username: formData.get("username"),
+    password: formData.get("password"),
+  };
+
+  if (typeof user.username !== "string") {
+    user.username = "";
+  }
+
+  if (typeof user.password !== "string") {
+    user.password = "";
+  }
+
+  const collection = await getCollection("users");
+  const ourUser = await collection.findOne({
+    username: user.username,
+  });
+
+  if (!ourUser) {
+    return failObject;
+  }
+
+  const match = bcrypt.compareSync(user.password, ourUser.password);
+
+  if (!match) {
+    return failObject;
+  }
+
+  const token = jwt.sign(
+    {
+      userId: ourUser._id,
+      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24,
+    },
+    process.env.JWT_SECRET
+  );
+
+  cookies().set("crud", token, {
+    httpOnly: true,
+    sameSite: "strict",
+    maxAge: 60 * 60 * 24,
+    secure: true,
+  });
+
+  return redirect('/')
 };
