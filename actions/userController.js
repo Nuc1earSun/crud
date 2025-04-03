@@ -1,12 +1,20 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { getCollection } from "../lib/db.js";
-// import { test } from "../lib/db.js";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { redirect } from "next/navigation";
 
 function isAlphaNumeric(x) {
   const regex = /^[a-zA-Z0-9]*$/;
   return regex.test(x);
 }
+
+export const logout = async function () {
+  (await cookies()).delete("crud");
+  redirect("/");
+};
 
 export const register = async function (prevState, formData) {
   const errors = {};
@@ -53,12 +61,32 @@ export const register = async function (prevState, formData) {
     };
   }
 
+  // hash password
+
+  const salt = bcrypt.genSaltSync(10);
+  user.password = bcrypt.hashSync(user.password, salt);
+
   // storing user in db
 
   const usersCollection = await getCollection("users");
-  await usersCollection.insertOne(user);
+  const newUser = await usersCollection.insertOne(user);
+  const userId = newUser.insertedId.toString();
+  // create jwt token
+  const token = jwt.sign(
+    {
+      userId,
+      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24,
+    },
+    process.env.JWT_SECRET
+  );
 
   // log them in using cookie
+  cookies().set("crud", token, {
+    httpOnly: true,
+    sameSite: "strict",
+    maxAge: 60 * 60 * 24,
+    secure: true,
+  });
 
   return {
     success: true,
