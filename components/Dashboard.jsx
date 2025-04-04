@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getCollection } from "../lib/db";
 import { ObjectId } from "mongodb";
 
@@ -20,9 +21,15 @@ export default async function Dashboard(props) {
         Your haikus
         {haikus.map((haiku, index) => (
           <div key={index}>
-            <p>{haiku.line1}</p>
-            <p>{haiku.line2}</p>
-            <p>{haiku.line3}</p>
+            {haiku.line1}
+            <br />
+            {haiku.line2}
+            <br />
+            {haiku.line3}
+            <br />
+            <Link href={`/edit/${haiku._id.toString()}`} className="btn btn-primary">
+              Edit haiku
+            </Link>
           </div>
         ))}
       </h2>
